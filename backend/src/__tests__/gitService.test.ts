@@ -22,6 +22,9 @@ describe('GitService', () => {
     const git = new GitService();
     const res = await git.commitAll(dir, 'add a');
     expect(res.committed).toBe(true);
+    expect(res.sha).toMatch(/^[0-9a-f]{7,}$/);
+    const head = await execa('git', ['rev-parse', '--short', 'HEAD'], { cwd: dir });
+    expect(res.sha).toBe(head.stdout.trim());
     const log = await execa('git', ['log', '--oneline'], { cwd: dir });
     expect(log.stdout).toContain('add a');
   });

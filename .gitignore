@@ -5,4 +5,8 @@ data/
 dist/
 build/
 *.log
+*.tsbuildinfo
 .DS_Store
+
+# Cloned/registered user repositories live here at runtime
+workspace/

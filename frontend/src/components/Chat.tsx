@@ -19,7 +19,9 @@ export function Chat() {
     <section className="chat">
       <div className="messages">
         {!active && <div className="msg assistant">Add a repo to start building.</div>}
-        {chat.map((m, i) => <div key={i} className={`msg ${m.role}`}>{m.text}</div>)}
+        {chat.map((m, i) => m.role === 'system'
+          ? <div key={i} className={`notice ${m.level ?? 'info'}`}>{m.text}</div>
+          : <div key={i} className={`msg ${m.role}`}>{m.text}</div>)}
         <div ref={endRef} />
       </div>
       <div className="composer">

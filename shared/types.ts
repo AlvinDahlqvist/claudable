@@ -25,10 +25,14 @@ export type ClaudeEvent =
   | { type: 'tool_use'; name: string; input: unknown }
   | { type: 'tool_result'; text: string }
   | { type: 'result'; success: boolean; sessionId?: string }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  /** A lifecycle/outcome notice surfaced inline in the chat (run started, committed, etc.). */
+  | { type: 'status'; level: 'info' | 'success' | 'error'; text: string };
 
 export interface PreviewStatus {
   running: boolean;
+  /** True while the dev server is booting but not yet accepting connections. */
+  starting?: boolean;
   url?: string;
   port?: number;
 }

@@ -26,6 +26,10 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 ui-sans-serif, 
 .msg { padding: 10px 12px; border-radius: 10px; max-width: 85%; white-space: pre-wrap; }
 .msg.user { align-self: flex-end; background: var(--accent2); color: #fff; }
 .msg.assistant { align-self: flex-start; background: #1c1c24; }
+.notice { align-self: center; font-size: 12px; padding: 4px 12px; border-radius: 999px; background: #1c1c24; color: var(--muted); border: 1px solid var(--border); max-width: 90%; text-align: center; }
+.notice.success { color: #6be29a; border-color: #234e36; background: #122017; }
+.notice.error { color: #ff8a6b; border-color: #5a2a1f; background: #21130f; }
+.notice.info { color: var(--muted); }
 .composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
 
 .preview { display: flex; flex-direction: column; min-height: 0; }

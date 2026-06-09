@@ -1,7 +1,7 @@
 import { execa } from 'execa';
 import { config } from './config.js';
 
-export interface CommitResult { committed: boolean; message?: string }
+export interface CommitResult { committed: boolean; message?: string; sha?: string }
 export interface PushResult { pushed: boolean; reason?: string }
 
 export class GitService {
@@ -27,7 +27,8 @@ export class GitService {
     if (!(await this.hasChanges(cwd))) return { committed: false };
     await execa('git', ['add', '-A'], { cwd });
     await execa('git', ['commit', '-m', message], { cwd, env: this.env() });
-    return { committed: true, message };
+    const sha = (await execa('git', ['rev-parse', '--short', 'HEAD'], { cwd })).stdout.trim();
+    return { committed: true, message, sha };
   }
 
   private async hasOrigin(cwd: string): Promise<boolean> {

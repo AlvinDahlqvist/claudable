@@ -19,11 +19,25 @@ async function main() {
   await store.load();
   const git = new GitService();
   const mcp = new McpService();
-  const preview = new PreviewManager((projectId, line) =>
-    hub.broadcast({ channel: 'terminal', projectId, source: 'preview', line }));
+  const preview = new PreviewManager(
+    (projectId, line) => hub.broadcast({ channel: 'terminal', projectId, source: 'preview', line }),
+    (projectId, status) => hub.broadcast({ channel: 'preview', projectId, status }),
+  );
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
   app.use('/api', createRoutes({ store, git, mcp, preview, hub }));
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(
+        `\n✖ Port ${config.port} is already in use — another Claudable backend is probably still running.\n` +
+        `  Find it:   lsof -nP -iTCP:${config.port} -sTCP:LISTEN\n` +
+        `  Stop it, or set a different PORT in .env, then retry.\n`,
+      );
+      process.exit(1);
+    }
+    throw err;
+  });
 
   server.listen(config.port, () => {
     console.log(`Claudable backend listening on http://localhost:${config.port}`);

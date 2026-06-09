@@ -3,7 +3,12 @@ import type { ClaudeEvent, PreviewStatus, WsServerMessage } from '@claudable/sha
 import { api, type ProjectView } from './api.js';
 import { useProjectStream } from './useProjectStream.js';
 
-export interface ChatMessage { role: 'user' | 'assistant'; text: string }
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  text: string;
+  /** For system notices: tints the inline pill. */
+  level?: 'info' | 'success' | 'error';
+}
 export interface TerminalLine { source: string; line: string }
 
 interface StoreState {
@@ -39,6 +44,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const active = projects.find((p) => p.id === activeId) ?? null;
   useEffect(() => { setPreview(active?.preview ?? { running: false }); }, [activeId, projects]);
 
+  // Auto-start the dev server when a project becomes active (Lovable-style).
+  // Best-effort: ignores projects whose run command can't be detected.
+  useEffect(() => {
+    if (!activeId) return;
+    const p = projects.find((x) => x.id === activeId);
+    if (p && !p.preview.running) api.startPreview(activeId).catch(() => {});
+  }, [activeId]);
+
   const select = useCallback((id: string) => {
     setActiveId(id); setChat([]); setTerminal([]);
   }, []);
@@ -49,7 +62,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const ev: ClaudeEvent = msg.event;
       if (ev.type === 'assistant') setChat((c) => [...c, { role: 'assistant', text: ev.text }]);
       else if (ev.type === 'tool_use') setChat((c) => [...c, { role: 'assistant', text: `🔧 ${ev.name}` }]);
-      else if (ev.type === 'error') setChat((c) => [...c, { role: 'assistant', text: `⚠️ ${ev.message}` }]);
+      else if (ev.type === 'error') setChat((c) => [...c, { role: 'system', text: `⚠️ ${ev.message}`, level: 'error' }]);
+      else if (ev.type === 'status') setChat((c) => [...c, { role: 'system', text: ev.text, level: ev.level }]);
     } else if (msg.channel === 'terminal') {
       setTerminal((t) => [...t, { source: msg.source, line: msg.line }]);
     } else if (msg.channel === 'preview') {

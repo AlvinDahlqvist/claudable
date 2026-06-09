@@ -70,6 +70,15 @@ export function createRoutes(deps: {
     if (!prompt) return res.status(400).json({ error: 'Empty prompt' });
 
     res.status(202).json({ accepted: true }); // run happens async, streamed over WS
+
+    // Surface a lifecycle/outcome notice inline in the chat.
+    const status = (level: 'info' | 'success' | 'error', text: string) =>
+      hub.broadcast({ channel: 'claude', projectId: project.id, event: { type: 'status', level, text } });
+    const gitLine = (line: string) =>
+      hub.broadcast({ channel: 'terminal', projectId: project.id, source: 'git', line });
+
+    console.log(`[run] project=${project.name} prompt=${JSON.stringify(prompt.slice(0, 80))}`);
+    status('info', 'Claude is working…');
     try {
       const result = await runClaude(
         { cwd: project.path, prompt, sessionId: project.sessionId },
@@ -79,19 +88,32 @@ export function createRoutes(deps: {
         },
       );
       if (result.sessionId) await store.update(project.id, { sessionId: result.sessionId });
-      if (result.success) {
-        const commit = await git.commitAll(project.path, `Claudable: ${prompt.slice(0, 60)}`);
-        hub.broadcast({ channel: 'terminal', projectId: project.id, source: 'git',
-          line: commit.committed ? `Committed: ${commit.message}` : 'Nothing to commit' });
-        if (commit.committed) {
-          const push = await git.push(project.path);
-          hub.broadcast({ channel: 'terminal', projectId: project.id, source: 'git',
-            line: push.pushed ? 'Pushed to origin' : `Push skipped: ${push.reason}` });
-        }
+
+      if (!result.success) {
+        console.log(`[run] project=${project.name} did not complete successfully`);
+        status('error', 'Claude did not finish (check the terminal panel for details).');
+        return;
       }
+
+      const commit = await git.commitAll(project.path, `Claudable: ${prompt.slice(0, 60)}`);
+      if (!commit.committed) {
+        console.log(`[run] project=${project.name} success, no file changes`);
+        gitLine('Nothing to commit');
+        status('info', 'Done — no file changes to commit.');
+        return;
+      }
+
+      gitLine(`Committed ${commit.sha}: ${commit.message}`);
+      const push = await git.push(project.path);
+      gitLine(push.pushed ? 'Pushed to origin' : `Push skipped: ${push.reason}`);
+      console.log(`[run] project=${project.name} committed ${commit.sha} pushed=${push.pushed}`);
+      status('success', push.pushed
+        ? `Committed ${commit.sha} · pushed to origin`
+        : `Committed ${commit.sha} · push skipped (${push.reason})`);
     } catch (err: any) {
-      hub.broadcast({ channel: 'terminal', projectId: project.id, source: 'git',
-        line: `Error: ${err.message}` });
+      console.error(`[run] project=${project.name} error:`, err.message);
+      gitLine(`Error: ${err.message}`);
+      status('error', `Error: ${err.message}`);
     }
   });
 

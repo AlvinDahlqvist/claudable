@@ -1,7 +1,19 @@
 import { execa, type ResultPromise } from 'execa';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import net from 'node:net';
 import type { PreviewStatus } from '@claudable/shared/types.js';
+
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Resolve true once something is listening on the given localhost port. */
+export function probePort(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host: '127.0.0.1' });
+    socket.once('connect', () => { socket.destroy(); resolve(true); });
+    socket.once('error', () => { socket.destroy(); resolve(false); });
+  });
+}
 
 interface PackageJson {
   dependencies?: Record<string, string>;
@@ -25,7 +37,11 @@ interface Running { child: ResultPromise; status: PreviewStatus }
 export class PreviewManager {
   private running = new Map<string, Running>();
 
-  constructor(private readonly onLine: (projectId: string, line: string) => void) {}
+  constructor(
+    private readonly onLine: (projectId: string, line: string) => void,
+    /** Optional: notified when a preview's status changes (e.g. becomes ready). */
+    private readonly onStatus?: (projectId: string, status: PreviewStatus) => void,
+  ) {}
 
   status(projectId: string): PreviewStatus {
     return this.running.get(projectId)?.status ?? { running: false };
@@ -61,11 +77,28 @@ export class PreviewManager {
     });
     const status: PreviewStatus = {
       running: true,
+      starting: true,
       port: run.defaultPort,
       url: `http://localhost:${run.defaultPort}`,
     };
     this.running.set(projectId, { child, status });
+    void this.awaitReady(projectId, run.defaultPort, child);
     return status;
+  }
+
+  /** Poll the dev-server port; once it accepts connections, flip status to ready. */
+  private async awaitReady(projectId: string, port: number, child: ResultPromise): Promise<void> {
+    for (let i = 0; i < 120; i++) {
+      const entry = this.running.get(projectId);
+      if (!entry || entry.child !== child) return; // stopped or replaced
+      if (await probePort(port)) {
+        const ready: PreviewStatus = { running: true, starting: false, port, url: `http://localhost:${port}` };
+        entry.status = ready;
+        this.onStatus?.(projectId, ready);
+        return;
+      }
+      await delay(500);
+    }
   }
 
   async stop(projectId: string): Promise<void> {
