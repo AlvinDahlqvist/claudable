@@ -6,14 +6,20 @@ export function Sidebar() {
   const { projects, activeId, active, select, refresh } = useStore();
   const [adding, setAdding] = useState(false);
   const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const add = async () => {
     const v = value.trim();
     if (!v) return;
+    setError(null);
     const body = v.startsWith('http') || v.endsWith('.git') ? { gitUrl: v } : { path: v };
-    await api.addProject(body);
-    setValue(''); setAdding(false);
-    await refresh();
+    try {
+      await api.addProject(body);
+      setValue(''); setAdding(false);
+      await refresh();
+    } catch (e: any) {
+      setError(e.message);
+    }
   };
 
   const connectSupabase = async () => {
@@ -37,6 +43,7 @@ export function Sidebar() {
             value={value} onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && add()} />
           <button className="btn" onClick={add}>Add</button>
+          {error && <div style={{ color: 'var(--accent)', fontSize: 12 }}>{error}</div>}
         </div>
       ) : (
         <button className="btn secondary" onClick={() => setAdding(true)}>+ Add repo</button>

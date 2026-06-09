@@ -37,13 +37,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { refresh(); }, [refresh]);
 
   const active = projects.find((p) => p.id === activeId) ?? null;
-  useEffect(() => { setPreview(active?.preview ?? { running: false }); }, [activeId]);
+  useEffect(() => { setPreview(active?.preview ?? { running: false }); }, [activeId, projects]);
 
   const select = useCallback((id: string) => {
     setActiveId(id); setChat([]); setTerminal([]);
   }, []);
 
   const handleMessage = useCallback((msg: WsServerMessage) => {
+    if (msg.projectId !== activeId) return; // ignore stale messages from a previous project
     if (msg.channel === 'claude') {
       const ev: ClaudeEvent = msg.event;
       if (ev.type === 'assistant') setChat((c) => [...c, { role: 'assistant', text: ev.text }]);
@@ -54,7 +55,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     } else if (msg.channel === 'preview') {
       setPreview(msg.status);
     }
-  }, []);
+  }, [activeId]);
 
   useProjectStream(activeId, handleMessage);
 

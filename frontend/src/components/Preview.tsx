@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
 
@@ -6,6 +6,8 @@ export function Preview() {
   const { active, preview } = useStore();
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0); // force iframe reload
+
+  useEffect(() => { setError(null); }, [active?.id]);
 
   const start = async () => {
     if (!active) return;
