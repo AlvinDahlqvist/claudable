@@ -22,8 +22,8 @@ async function main() {
   const preview = new PreviewManager((projectId, line) =>
     hub.broadcast({ channel: 'terminal', projectId, source: 'preview', line }));
 
-  app.use('/api', createRoutes({ store, git, mcp, preview, hub }));
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
+  app.use('/api', createRoutes({ store, git, mcp, preview, hub }));
 
   server.listen(config.port, () => {
     console.log(`Claudable backend listening on http://localhost:${config.port}`);

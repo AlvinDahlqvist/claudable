@@ -38,7 +38,8 @@ export function createRoutes(deps: {
       let projectPath: string;
       let name: string;
       if (body.gitUrl) {
-        name = body.name ?? body.gitUrl.split('/').pop()!.replace(/\.git$/, '');
+        name = body.name ?? body.gitUrl.split('/').pop()!.replace(/\.git$/, '').replace(/\/$/, '');
+        if (!name) return res.status(400).json({ error: 'Could not derive a name from gitUrl' });
         projectPath = path.join(config.repoRoot, 'workspace', name);
         await fs.mkdir(path.dirname(projectPath), { recursive: true });
         await git.clone(body.gitUrl, projectPath);
@@ -69,26 +70,28 @@ export function createRoutes(deps: {
     if (!prompt) return res.status(400).json({ error: 'Empty prompt' });
 
     res.status(202).json({ accepted: true }); // run happens async, streamed over WS
-
-    const result = await runClaude(
-      { cwd: project.path, prompt, sessionId: project.sessionId },
-      {
-        onEvent: (event) => hub.broadcast({ channel: 'claude', projectId: project.id, event }),
-        onLine: (line) => hub.broadcast({ channel: 'terminal', projectId: project.id, source: 'claude', line }),
-      },
-    );
-
-    if (result.sessionId) await store.update(project.id, { sessionId: result.sessionId });
-
-    if (result.success) {
-      const commit = await git.commitAll(project.path, `Claudable: ${prompt.slice(0, 60)}`);
-      hub.broadcast({ channel: 'terminal', projectId: project.id, source: 'git',
-        line: commit.committed ? `Committed: ${commit.message}` : 'Nothing to commit' });
-      if (commit.committed) {
-        const push = await git.push(project.path);
+    try {
+      const result = await runClaude(
+        { cwd: project.path, prompt, sessionId: project.sessionId },
+        {
+          onEvent: (event) => hub.broadcast({ channel: 'claude', projectId: project.id, event }),
+          onLine: (line) => hub.broadcast({ channel: 'terminal', projectId: project.id, source: 'claude', line }),
+        },
+      );
+      if (result.sessionId) await store.update(project.id, { sessionId: result.sessionId });
+      if (result.success) {
+        const commit = await git.commitAll(project.path, `Claudable: ${prompt.slice(0, 60)}`);
         hub.broadcast({ channel: 'terminal', projectId: project.id, source: 'git',
-          line: push.pushed ? 'Pushed to origin' : `Push skipped: ${push.reason}` });
+          line: commit.committed ? `Committed: ${commit.message}` : 'Nothing to commit' });
+        if (commit.committed) {
+          const push = await git.push(project.path);
+          hub.broadcast({ channel: 'terminal', projectId: project.id, source: 'git',
+            line: push.pushed ? 'Pushed to origin' : `Push skipped: ${push.reason}` });
+        }
       }
+    } catch (err: any) {
+      hub.broadcast({ channel: 'terminal', projectId: project.id, source: 'git',
+        line: `Error: ${err.message}` });
     }
   });
 
@@ -114,9 +117,11 @@ export function createRoutes(deps: {
   r.patch('/projects/:id/settings', async (req, res) => {
     const project = store.get(req.params.id);
     if (!project) return res.status(404).json({ error: 'Unknown project' });
-    const updated = await store.update(req.params.id, {
-      settings: { ...project.settings, ...req.body },
-    });
+    const incoming = req.body ?? {};
+    const patch: { runCommand?: string; port?: number } = {};
+    if (typeof incoming.runCommand === 'string') patch.runCommand = incoming.runCommand;
+    if (typeof incoming.port === 'number') patch.port = incoming.port;
+    const updated = await store.update(req.params.id, { settings: { ...project.settings, ...patch } });
     res.json(updated);
   });
 

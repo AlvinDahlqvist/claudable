@@ -11,6 +11,7 @@ export class WsHub {
     this.wss = new WebSocketServer({ server, path: '/ws' });
     this.wss.on('connection', (socket) => {
       this.subs.set(socket, new Set());
+      socket.on('error', (err) => console.error('[wsHub] socket error:', err));
       socket.on('message', (raw) => {
         let msg: WsClientMessage;
         try { msg = JSON.parse(String(raw)); } catch { return; }
