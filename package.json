@@ -1,0 +1,15 @@
+{
+  "name": "claudable",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["shared", "backend", "frontend"],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,magenta \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "test": "npm run test -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.6.0"
+  }
+}
