@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import os from 'node:os';
 import net from 'node:net';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import type { PreviewStatus } from '@claudable/shared/types.js';
-import { detectRunCommand, PreviewManager, probePort } from '../previewManager.js';
+import { detectRunCommand, PreviewManager, probePort, needsInstall } from '../previewManager.js';
 
 describe('detectRunCommand', () => {
   it('detects Vite', () => {
@@ -51,6 +53,20 @@ describe('PreviewManager', () => {
     await new Promise<void>((resolve) => setTimeout(resolve, 300));
     expect(pm.status(projectId).running).toBe(false);
   }, 5000);
+});
+
+describe('needsInstall', () => {
+  it('is true with a package.json but no node_modules, false otherwise', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'claudable-install-'));
+    // no package.json -> nothing to install
+    expect(await needsInstall(dir)).toBe(false);
+    // package.json but no node_modules -> needs install
+    await fs.writeFile(path.join(dir, 'package.json'), '{"name":"x"}');
+    expect(await needsInstall(dir)).toBe(true);
+    // node_modules present -> already installed
+    await fs.mkdir(path.join(dir, 'node_modules'));
+    expect(await needsInstall(dir)).toBe(false);
+  });
 });
 
 describe('probePort', () => {

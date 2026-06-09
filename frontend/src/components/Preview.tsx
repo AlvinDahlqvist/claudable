@@ -22,6 +22,7 @@ export function Preview() {
   const stop = async () => { if (active) await api.stopPreview(active.id); };
 
   const ready = preview.running && !preview.starting && !!preview.url;
+  const installing = preview.starting && preview.phase === 'installing';
 
   return (
     <section className="preview">
@@ -30,7 +31,9 @@ export function Preview() {
           <div className="lights"><i /><i /><i /></div>
           <div className="urlbar">
             <span className="lock">🔒</span>
-            <span className="u">{preview.starting ? 'starting dev server…' : (preview.url ?? 'about:blank')}</span>
+            <span className="u">
+              {installing ? 'installing dependencies…' : preview.starting ? 'starting dev server…' : (preview.url ?? 'about:blank')}
+            </span>
           </div>
           <div className="acts">
             {preview.running
@@ -48,8 +51,12 @@ export function Preview() {
               {preview.starting ? (
                 <>
                   <div className="boot-spark"><Spark size={24} /></div>
-                  <div className="big">Booting the dev server…</div>
-                  <div>Hang tight — loading your app the moment it's ready.</div>
+                  <div className="big">{installing ? 'Installing dependencies…' : 'Booting the dev server…'}</div>
+                  <div>
+                    {installing
+                      ? "First run on a fresh repo — this can take a minute or two. Watch the preview tab for progress."
+                      : "Hang tight — loading your app the moment it's ready."}
+                  </div>
                 </>
               ) : error ? (
                 <>

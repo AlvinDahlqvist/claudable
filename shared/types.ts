@@ -33,6 +33,8 @@ export interface PreviewStatus {
   running: boolean;
   /** True while the dev server is booting but not yet accepting connections. */
   starting?: boolean;
+  /** What the preview is doing while starting: installing deps or booting the server. */
+  phase?: 'installing' | 'starting';
   url?: string;
   port?: number;
 }
