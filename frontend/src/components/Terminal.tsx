@@ -16,13 +16,16 @@ export function Terminal({ open, onToggle }: { open: boolean; onToggle: () => vo
     <div className={`terminal ${open ? '' : 'closed'}`}>
       <div className="tabs">
         {TABS.map((t) => (
-          <div key={t} className={`tab ${t === tab ? 'active' : ''}`} onClick={() => setTab(t)}>{t}</div>
+          <div key={t} className={`tab ${t === tab ? 'active' : ''}`} onClick={() => setTab(t)}>
+            <span className="tic" />{t}
+          </div>
         ))}
-        <div style={{ flex: 1 }} />
-        <div className="tab" onClick={onToggle}>{open ? '▾' : '▸'}</div>
+        <div className="collapse" onClick={onToggle}>{open ? 'hide ▾' : 'logs ▸'}</div>
       </div>
       <div className="lines">
-        {lines.map((l, i) => <div key={i} className={`line ${l.source}`}>{l.line}</div>)}
+        {lines.length === 0
+          ? <div className="empty-line">— nothing on the {tab} channel yet —</div>
+          : lines.map((l, i) => <div key={i} className={`line ${l.source}`}>{l.line}</div>)}
         <div ref={endRef} />
       </div>
     </div>

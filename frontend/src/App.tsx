@@ -7,15 +7,18 @@ import { Terminal } from './components/Terminal.js';
 export function App() {
   const [terminalOpen, setTerminalOpen] = useState(true);
   return (
-    <div className="app">
-      <Sidebar />
-      <div className="center">
-        <div className="workspace">
-          <Chat />
-          <Preview />
+    <>
+      <div className="grain" aria-hidden="true" />
+      <div className="app">
+        <Sidebar />
+        <div className="center">
+          <div className="workspace">
+            <Chat />
+            <Preview />
+          </div>
+          <Terminal open={terminalOpen} onToggle={() => setTerminalOpen((v) => !v)} />
         </div>
-        <Terminal open={terminalOpen} onToggle={() => setTerminalOpen((v) => !v)} />
       </div>
-    </div>
+    </>
   );
 }

@@ -10,3 +10,7 @@ build/
 
 # Cloned/registered user repositories live here at runtime
 workspace/
+
+# local screenshots / browser-tool artifacts
+.playwright-mcp/
+claudable-*.png
