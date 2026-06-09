@@ -1,4 +1,4 @@
-import { execa, type ExecaChildProcess } from 'execa';
+import { execa, type ResultPromise } from 'execa';
 import readline from 'node:readline';
 import type { ClaudeEvent } from '@claudable/shared/types.js';
 import { config } from './config.js';
@@ -69,7 +69,7 @@ export async function runClaude(
   ];
   if (opts.sessionId) args.push('--resume', opts.sessionId);
 
-  let child: ExecaChildProcess;
+  let child: ResultPromise;
   try {
     child = execa(config.claudeBin, args, { cwd: opts.cwd, reject: false });
   } catch (err: any) {
@@ -86,7 +86,7 @@ export async function runClaude(
       if (event.type === 'result') result = { success: event.success, sessionId: event.sessionId };
     }
   });
-  child.stderr?.on('data', (d) => handlers.onLine(String(d)));
+  child.stderr?.on('data', (d: unknown) => handlers.onLine(String(d)));
 
   const exit = await child;
   if (exit.exitCode === 127 || (exit.failed && (exit.code === 'ENOENT' || (exit as any).cause?.code === 'ENOENT'))) {

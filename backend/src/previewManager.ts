@@ -1,4 +1,4 @@
-import { execa, type ExecaChildProcess } from 'execa';
+import { execa, type ResultPromise } from 'execa';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { PreviewStatus } from '@claudable/shared/types.js';
@@ -20,7 +20,7 @@ export function detectRunCommand(pkg: PackageJson): DetectedRun | null {
   return null;
 }
 
-interface Running { child: ExecaChildProcess; status: PreviewStatus }
+interface Running { child: ResultPromise; status: PreviewStatus }
 
 export class PreviewManager {
   private running = new Map<string, Running>();
