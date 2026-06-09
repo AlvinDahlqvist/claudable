@@ -1,0 +1,8 @@
+services:
+  claudable:
+    build: .
+    ports: ["4000:4000", "5180:5180"]
+    volumes:
+      - ./data:/app/data
+      - ${WORKSPACE:-./workspace}:/app/workspace
+    env_file: .env
