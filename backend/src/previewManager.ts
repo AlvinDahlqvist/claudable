@@ -56,6 +56,9 @@ export class PreviewManager {
     const child = execa(cmd, args, { cwd, reject: false, env: { PORT: String(run.defaultPort), BROWSER: 'none' } });
     child.stdout?.on('data', (d) => this.onLine(projectId, String(d)));
     child.stderr?.on('data', (d) => this.onLine(projectId, String(d)));
+    child.on('exit', () => {
+      if (this.running.get(projectId)?.child === child) this.running.delete(projectId);
+    });
     const status: PreviewStatus = {
       running: true,
       port: run.defaultPort,
@@ -68,5 +71,9 @@ export class PreviewManager {
   async stop(projectId: string): Promise<void> {
     const r = this.running.get(projectId);
     if (r) { r.child.kill('SIGTERM'); this.running.delete(projectId); }
+  }
+
+  async stopAll(): Promise<void> {
+    for (const id of [...this.running.keys()]) await this.stop(id);
   }
 }

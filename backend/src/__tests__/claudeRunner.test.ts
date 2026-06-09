@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { parseStreamLine } from '../claudeRunner.js';
+import { describe, it, expect, afterEach } from 'vitest';
+import os from 'node:os';
+import { parseStreamLine, runClaude } from '../claudeRunner.js';
+import { config } from '../config.js';
 
 describe('parseStreamLine', () => {
   it('ignores blank and non-JSON lines', () => {
@@ -46,4 +48,24 @@ describe('parseStreamLine', () => {
       { type: 'result', success: false, sessionId: 'sess-2' },
     ]);
   });
+});
+
+describe('runClaude — missing binary', () => {
+  const originalBin = config.claudeBin;
+  afterEach(() => { config.claudeBin = originalBin; });
+
+  it('emits a clear error and returns {success:false} when the binary does not exist', async () => {
+    config.claudeBin = '/totally/nonexistent/claude-binary-xyz';
+    const events: any[] = [];
+    const result = await runClaude(
+      { cwd: os.tmpdir(), prompt: 'hello' },
+      { onEvent: (e) => events.push(e), onLine: () => {} },
+    );
+    expect(result).toEqual({ success: false });
+    expect(events).toHaveLength(1);
+    expect(events[0]).toEqual({
+      type: 'error',
+      message: 'claude CLI not found. Install it and ensure it is on PATH.',
+    });
+  }, 5000);
 });

@@ -89,13 +89,12 @@ export async function runClaude(
   child.stderr?.on('data', (d) => handlers.onLine(String(d)));
 
   const exit = await child;
-  if (exit.exitCode !== 0 && !result.sessionId) {
-    handlers.onEvent({
-      type: 'error',
-      message: exit.exitCode === 127
-        ? `claude CLI not found. Install it and ensure it is on PATH.`
-        : `claude exited with code ${exit.exitCode}`,
-    });
+  if (exit.exitCode === 127 || (exit.failed && (exit.code === 'ENOENT' || (exit as any).cause?.code === 'ENOENT'))) {
+    handlers.onEvent({ type: 'error', message: 'claude CLI not found. Install it and ensure it is on PATH.' });
+    return { success: false };
+  }
+  if ((exit.exitCode !== 0 || exit.exitCode === undefined) && !result.success) {
+    handlers.onEvent({ type: 'error', message: `claude exited with code ${exit.exitCode}` });
     return { success: false };
   }
   return result;
