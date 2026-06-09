@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init *)",
+      "Bash(mkdir -p docs/superpowers/specs)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m 'Add Claudable design spec *)"
+    ]
+  }
+}
